@@ -1,0 +1,35 @@
+version: '3.7'
+
+services:
+  nodered:
+    image: nodered/node-red:3.1.9-18
+    # network_mode: host
+    extra_hosts:
+      - 'api.yousolution.local:192.168.178.100'
+    volumes:
+      - ./data:/data
+    ports:
+      - '1880:1880'
+      # - '4443:4443'
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+    environment:
+      NODE_ENV: 'dev'
+      # VIRTUAL_HOST: websocket.yousolution.local
+      # VIRTUAL_PORT: '4443'
+
+    networks:
+      ys_tools_net:
+        aliases:
+          - nodered_659eafe98b4d8400110381f1
+      # ys_ingress_net:
+      #   aliases:
+      #     - nodered_659eafe98b4d8400110381f1
+
+networks:
+  ys_tools_net:
+    external: true
+  # ys_ingress_net:
+  #   external: true

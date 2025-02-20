@@ -1,0 +1,236 @@
+<!--
+ Copyright 2023 Andrea Trentin.
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+		 http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script type="text/x-red" data-template-name="wstunnel">
+  <div class="form-row">
+    <label for="node-config-input-name"><i class="fa fa-bookmark"></i> name</label>
+    <input type="text" id="node-config-input-name" placeholder="tunnel name" />
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-host"><i class="fa fa-bookmark"></i> Host</label>
+    <input type="text" id="node-config-input-host" placeholder="localhost" style="width: 40%;" />
+    <label for="node-config-input-port" style="margin-left: 10px; width: 35px; "> Port</label>
+    <input type="text" id="node-config-input-port" placeholder="22" style="width:45px">
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-srcAddr"><i class="fa fa-gear"></i> Source Address</label>
+    <input type="text" id="node-config-input-srcAddr" placeholder="localhost">
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-srcPort"><i class="fa fa-gear"></i> Source Port</label>
+    <input type="text" id="node-config-input-srcPort">
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-dstAddr"><i class="fa fa-gear"></i> Destination Address</label>
+    <input type="text" id="node-config-input-dstAddr" placeholder="localhost">
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-dstPort"><i class="fa fa-gear"></i> Destination Port</label>
+    <input type="text" id="node-config-input-dstPort">
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-timeout"><i class="fa fa-gear"></i> Timeout</label>
+    <input type="text" id="node-config-input-timeout">
+  </div>
+</script>
+
+<script type="text/javascript">
+  RED.nodes.registerType('wstunnel', {
+    category: 'config',
+    color: '#AAAA66',
+    defaults: {
+      name: { value: '', required: true },
+      host: { value: '' },
+      port: { value: '' },
+      srcAddr: { value: '' },
+      srcPort: { value: '', required: true },
+      dstAddr: { value: '' },
+      dstPort: { value: '' },
+      timeout: { value: '' },
+    },
+    label: function () {
+      return this.name;
+    },
+    oneditprepare: function () {},
+  });
+</script>
+
+<script type="text/x-red" data-template-name="wstunnel client">
+  <div class="form-row">
+    <label for="node-input-url"><i class="fa fa-bookmark"></i> Url</label>
+    <input type="text" id="node-input-url" placeholder="Url tunnel" />
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="wstunnel client">
+  <p>
+    This node establishes a WebSocket client connection to a remote WebSocket server,
+    enabling the creation of an HTTP tunnel over the WebSocket connection. It can be
+    used for creating secure connections for web services or routing HTTP traffic through
+    a WebSocket channel.
+  </p>
+
+  <h3>Parameters</h3>
+  <table class="node-help">
+    <tr>
+      <td><strong>Url</strong></td>
+      <td>The URL of the WebSocket server to connect to. This should be in the format `ws://` or `wss://` for secure WebSocket connections. For example: `wss://example.com/socket`.</td>
+    </tr>
+  </table>
+
+  <h3>Usage</h3>
+  <p>
+    Once configured, this node will initiate a WebSocket connection to the specified server URL.
+    After the connection is established, the node can be used to tunnel HTTP traffic to the remote server.
+    This can be useful for scenarios like securely forwarding HTTP requests over a WebSocket connection.
+  </p>
+
+  <h3>Example</h3>
+  <pre>
+    [
+      {
+        "id": "wstunnel-client-node",
+        "type": "wstunnel client",
+        "url": "wss://example.com/socket",
+        "x": 300,
+        "y": 200,
+        "wires": []
+      }
+    ]
+  </pre>
+
+  <h3>Notes</h3>
+  <ul>
+    <li>The node initiates a WebSocket connection when deployed and listens for incoming HTTP requests to tunnel.</li>
+    <li>If the connection is closed or fails, the node will attempt to reconnect based on internal reconnection logic.</li>
+    <li>Ensure the WebSocket server you're connecting to supports tunneling or is configured to handle this type of traffic.</li>
+  </ul>
+</script>
+
+<script type="text/javascript">
+  RED.nodes.registerType('wstunnel client', {
+    category: 'network',
+    color: '#a7c957',
+    defaults: {
+      url: { value: '' },
+    },
+    inputs: 1,
+    outputs: 0,
+    icon: 'font-awesome/fa-lock',
+    label: function () {
+      return this.name || 'tunnel Websocket client';
+    },
+    labelStyle: function () {
+      return this.name ? 'node_label_italic' : '';
+    },
+  });
+</script>
+
+<script type="text/x-red" data-template-name="wstunnel server">
+  <div class="form-row">
+    <label for="node-input-wstunnnel"><i class="fa fa-gears"></i> Cofigure Tunnel Websocket server</label>
+    <input type="text" id="node-input-wstunnel">
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="wstunnel server">
+  <p>
+    This node is used to configure and manage a WebSocket server tunnel. It allows the establishment
+    of WebSocket-based communication between a server and a client. You can define the source and destination
+    addresses and ports to tunnel the traffic through WebSocket connections.
+  </p>
+
+  <h3>Parameters</h3>
+  <table class="node-help">
+    <tr>
+      <td><strong>Name</strong></td>
+      <td>A unique name for the tunnel configuration. This will help you identify the tunnel in Node-RED.</td>
+    </tr>
+    <tr>
+      <td><strong>Host</strong></td>
+      <td>The host address to which the WebSocket server should connect. This is typically the address of your server hosting the WebSocket server.</td>
+    </tr>
+    <tr>
+      <td><strong>Port</strong></td>
+      <td>The port on which the WebSocket server will listen. This is the port used to accept WebSocket connections from clients.</td>
+    </tr>
+    <tr>
+      <td><strong>Source Address</strong></td>
+      <td>The source address (IP or hostname) for the WebSocket connection. This is typically set to the address of the service initiating the WebSocket connection.</td>
+    </tr>
+    <tr>
+      <td><strong>Source Port</strong></td>
+      <td>The source port that the WebSocket server will use. This is required to define the source of the communication.</td>
+    </tr>
+    <tr>
+      <td><strong>Destination Address</strong></td>
+      <td>The destination address where the WebSocket connection should forward the tunneled HTTP traffic. This is usually set to the IP or hostname of the remote service.</td>
+    </tr>
+    <tr>
+      <td><strong>Destination Port</strong></td>
+      <td>The destination port where the tunneled HTTP traffic will be sent. This corresponds to the port of the destination service.</td>
+    </tr>
+    <tr>
+      <td><strong>Timeout</strong></td>
+      <td>Timeout in milliseconds for the WebSocket connection. If the WebSocket connection does not establish within this time, the connection attempt will be aborted.</td>
+    </tr>
+  </table>
+
+  <h3>Usage</h3>
+  <p>
+    After configuring the tunnel server, the node will act as the WebSocket server. It listens for incoming
+    WebSocket connection requests and forwards any received HTTP traffic to the specified destination address and port.
+  </p>
+
+  <h3>Example</h3>
+  <pre>
+    [
+      {
+        "id": "wstunnel-server-node",
+        "type": "wstunnel server",
+        "wstunnel": "wstunnel-config",
+        "name": "My WebSocket Tunnel Server",
+        "x": 300,
+        "y": 200,
+        "wires": []
+      }
+    ]
+  </pre>
+
+  <h3>Notes</h3>
+  <ul>
+    <li>The server node requires a valid tunnel configuration to function. You can link a configuration node using the 'Configure Tunnel WebSocket server' field.</li>
+    <li>If the WebSocket server is not running, the node will attempt to reconnect based on the configured timeout.</li>
+    <li>Ensure the WebSocket server and client are compatible with the tunneling protocol.</li>
+  </ul>
+</script>
+
+<script type="text/javascript">
+  RED.nodes.registerType('wstunnel server', {
+    category: 'network',
+    color: '#a7c957',
+    defaults: {
+      wstunnel: { type: 'wstunnel', required: true },
+      name: { value: '' },
+    },
+    inputs: 0,
+    outputs: 0,
+    icon: 'font-awesome/fa-lock',
+    label: function () {
+      return this.name || 'tunnel Websocket server';
+    },
+    labelStyle: function () {
+      return this.name ? 'node_label_italic' : '';
+    },
+  });
+</script>

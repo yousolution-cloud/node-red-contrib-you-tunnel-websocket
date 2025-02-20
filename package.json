@@ -1,0 +1,40 @@
+{
+  "name": "@yousolution/node-red-contrib-you-tunnel-websocket",
+  "version": "0.0.1",
+  "description": "Module to create websockeet tunnel for NODE-RED",
+  "license": "MIT",
+  "scripts": {
+    "update": "npm pack && mv yousolution-node-red-contrib-you-tunnel-websocket-$npm_package_version.tgz ./data && cd data && rm -rf node_modules && npm i yousolution-node-red-contrib-you-tunnel-websocket-$npm_package_version.tgz && docker-compose restart",
+    "test": "mocha 'test/**/*.spec.js'",
+    "coverage": "nyc npm run test"
+  },
+  "keywords": [
+    "node-red",
+    "websocket",
+    "tunnel",
+    "integration",
+    "youSolution.Cloud"
+  ],
+  "author": "Andrea Trentin <andrea.trentin@yousolution.cloud>",
+  "node-red": {
+    "version": ">=2.0.0",
+    "nodes": {
+      "wsTunnel": "/nodes/wsTunnel.js"
+    }
+  },
+  "dependencies": {
+    "uuid": "^11.0.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yousolution-cloud/node-red-contrib-you-tunnel-websocket.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "node-red": "^3.0.2",
+    "node-red-node-test-helper": "^0.3.1"
+  }
+}
