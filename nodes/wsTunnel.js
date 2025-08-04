@@ -362,11 +362,19 @@ module.exports = function (RED) {
       });
 
       // Gestiamo i messaggi ricevuti dal client
-      // ws.on('message', (message) => {
-      //   console.log(`Messaggio ricevuto dal client: ${message}`);
-      //   // Rispondiamo al client
-      //   // ws.send(`Hai detto: ${message}`);
-      // });
+      ws.on('message', (data) => {
+        const uuid = data.slice(0, 36);
+        data = data.slice(36);
+
+        if (instances[options.id][uuid] && instances[options.id][uuid].socket) {
+          instances[options.id][uuid].socket.write(data);
+        }
+        console.log(`Messaggio ricevuto dal client:`);
+        console.log(data);
+        // console.log(`Messaggio ricevuto dal client: ${data}`);
+        // Rispondiamo al client
+        // ws.send(`Hai detto: ${data}`);
+      });
 
       // Gestiamo la chiusura della connessione
       ws.on('close', () => {
@@ -389,61 +397,33 @@ module.exports = function (RED) {
 
   function TCPServer(options) {
     instances[options.id].server = net.createServer((socket) => {
-      // console.log('Client connesso');
+      const uuid = uuidv4();
+      const uuidBuffer = Buffer.from(uuid);
+
+      console.log(`Client connesso ${uuid}`);
+      // Mantenere la connessione viva
+      // socket.setKeepAlive(true);
 
       // Variabile per memorizzare i dati grezzi della richiesta
-      let rawRequestData = '';
+      // let rawRequestData = '';
+      instances[options.id][uuid] = { socket };
+      // instances[options.id][uuid].socket = socket;
 
       // Leggi i dati grezzi dal socket
       socket.on('data', async (data) => {
-        rawRequestData += data.toString(); // Aggiungi i dati ricevuti alla variabile rawRequestData
+        // console.log('DATA');
+        // console.log(data);
+        instances[options.id].websocketServer.send(Buffer.concat([uuidBuffer, Buffer.from(data)]));
+      });
 
-        // Puoi scegliere di processare la richiesta solo quando hai ricevuto tutto il contenuto, ad esempio quando la richiesta termina
-        if (rawRequestData.includes('\r\n\r\n')) {
-          // Quando i dati contengono l'header completo, puoi trattarli come una richiesta completa
-
-          // Sostituire il campo Host con il nuovo valore
-          rawRequestData = rawRequestData.replace(/Host:\s*([^\r\n]*)/, `Host: ${options.dstAddr}:${options.dstPort}`);
-          console.log('Richiesta HTTP raw ricevuta:');
-          console.log(rawRequestData);
-
-          try {
-            const response = await requestFromServer(rawRequestData, options);
-            // console.log('-----------');
-            // console.log(response);
-            // console.log('-----------');
-            socket.write(response);
-            // Rispondi al client (opzionale)
-            // socket.write('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nResponse OK');
-            // Chiudi la connessione (opzionale)
-          } catch (error) {
-            console.log(error);
-            let errorRespose =
-              `HTTP/1.1 408 Request Timeout\r\n` +
-              `Content-Type: text/plain; charset=utf-8\r\n` +
-              // `Content-Length: 29\r\n` +
-              `Connection: close\r\n` +
-              `Date: ${new Date().toUTCString()}\r\n\r\n` + // usa toUTCString() invece di toGMTString
-              `Request Timeout: The server timed out waiting for the request.`;
-
-            if (error instanceof WebsocketTunnelError) {
-              errorRespose =
-                `HTTP/1.1 ${error.code} ${error.name}\r\n` +
-                `Content-Type: text/plain; charset=utf-8\r\n` +
-                // `Content-Length: 29\r\n` +
-                `Connection: close\r\n` +
-                `Date: ${new Date().toUTCString()}\r\n\r\n` + // usa toUTCString() invece di toGMTString
-                `${error.message}`;
-            }
-
-            socket.write(errorRespose); // Invia la risposta di timeout
-          }
-          socket.end();
-        }
+      socket.on('close', () => {
+        console.log('Client closed connection');
+        delete instances[options.id][uuid];
       });
 
       socket.on('end', () => {
         console.log('Client disconnected');
+        instances[options.id].websocketServer.send(Buffer.concat([uuidBuffer, Buffer.from('CLOSE')]));
       });
 
       socket.on('error', (err) => {
@@ -453,7 +433,7 @@ module.exports = function (RED) {
 
     try {
       instances[options.id].server.listen(options.srcPort, () => {
-        console.log(`HTTP server listening on port ${options.srcPort}`);
+        console.log(`TCP server listening on port ${options.srcPort}`);
       });
       instances[options.id].server.on('error', (error) => {
         console.log(error);
@@ -470,6 +450,7 @@ module.exports = function (RED) {
         https: 443,
         ftp: 21,
         ssh: 22,
+        mssql: 1433,
       };
       // Add "http://" as a default protocol
       if (!/^https?:\/\//i.test(url)) {
