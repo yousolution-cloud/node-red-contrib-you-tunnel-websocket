@@ -1,10 +1,10 @@
 {
   "name": "@yousolution/node-red-contrib-you-tunnel-websocket",
-  "version": "0.1.0-dev",
+  "version": "0.2.1-dev-1",
   "description": "Module to create websockeet tunnel for NODE-RED",
   "license": "MIT",
   "scripts": {
-    "update": "npm pack && mv yousolution-node-red-contrib-you-tunnel-websocket-$npm_package_version.tgz ./data && cd data && rm -rf node_modules && npm i yousolution-node-red-contrib-you-tunnel-websocket-$npm_package_version.tgz && docker-compose restart",
+    "update": "PACKAGE_NAME=$(npm pack) && mv $PACKAGE_NAME ./data && cd data && rm -rf node_modules && npm i $PACKAGE_NAME  && docker-compose restart",
     "test": "mocha 'test/**/*.spec.js'",
     "coverage": "nyc npm run test"
   },
@@ -19,11 +19,19 @@
   "node-red": {
     "version": ">=2.0.0",
     "nodes": {
-      "wsTunnel": "/nodes/wsTunnel.js"
+      "wsTunnel": "./nodes/wsTunnel.js"
     }
   },
   "dependencies": {
-    "uuid": "^11.0.5"
+    "cookie": "^1.0.2",
+    "cross-conf-env": "^1.3.0",
+    "dotenv": "^17.2.1",
+    "express": "^4.21.2",
+    "http-parser-js": "^0.5.10",
+    "http-proxy": "^1.18.1",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.0",
+    "reverse-ws-tunnel": "file:./../libs/reverse-ws-tunnel-1.0.0.tgz"
   },
   "repository": {
     "type": "git",
