@@ -55,34 +55,48 @@ module.exports = function (RED) {
     const path = node.tunnelConfig.options.path;
     const tunnelIdHeaderName = node.tunnelConfig.options.tunnelIdHeaderName;
 
-    instances[node.id] = instances[node.id] ? instances[node.id] : { state: { [port]: {} } };
+    instances[node.id] = instances[node.id] || { state: {} };
+
+    for (const p in instances[node.id].state) {
+      const old = instances[node.id].state[p];
+      if (old.webSocketServer) {
+        old.webSocketServer.close(() => {
+          console.log(`Closed old WebSocketServer on port ${p}`);
+        });
+      }
+      delete instances[node.id].state[p];
+    }
+
+    instances[node.id].state = startWebSocketServer({
+      port,
+      tunnelIdHeaderName,
+    });
 
     console.log(`node id: ${node.id}`);
 
+    // if (instances[node.id].state[port].webSocketServer) {
+    //   console.log('A');
+    //   instances[node.id].state[port].webSocketServer.close(() => {
+    //     console.log(`Server closed ${node.id} ${port}. Reconnecting...`);
+
+    //     instances[node.id].state = startWebSocketServer({
+    //       port,
+    //       tunnelIdHeaderName,
+    //     });
+    //     onListening();
+    //   });
+    // }
+
+    // if (!instances[node.id].state[port].webSocketServer) {
+    //   console.log('B');
+
+    //   instances[node.id].state = startWebSocketServer({
+    //     port,
+    //     tunnelIdHeaderName,
+    //   });
+    // }
+
     if (instances[node.id].state[port].webSocketServer) {
-      console.log('A');
-      instances[node.id].state[port].webSocketServer.close(() => {
-        console.log(`Server closed ${node.id} ${port}. Reconnecting...`);
-
-        instances[node.id].state = startWebSocketServer({
-          port,
-          tunnelIdHeaderName,
-        });
-        onListening();
-      });
-    }
-
-    if (!instances[node.id].state[port].webSocketServer) {
-      console.log('B');
-
-      instances[node.id].state = startWebSocketServer({
-        port,
-        tunnelIdHeaderName,
-      });
-    }
-
-    if (instances[node.id].state[port].webSocketServer) {
-      console.log('C');
       onListening();
     }
 
