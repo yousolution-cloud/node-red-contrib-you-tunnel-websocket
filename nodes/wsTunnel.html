@@ -33,8 +33,18 @@
     <span>Name of the http custom header</span>
   </div>
   <div class="form-row">
-    <label for="node-config-input-tunnel-id-header-name"><i class="fa fa-gear"></i> Header </label>
-    <input type="text" id="node-config-input-tunnel-id-header-name" placeholder="x-tunnel-id">
+    <label for="node-config-input-tunnelIdHeaderName"><i class="fa fa-gear"></i> Header </label>
+    <input type="text" id="node-config-input-tunnelIdHeaderName" placeholder="x-tunnel-id">
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-logLevel"><i class="fa fa-list"></i> Log Level</label>
+    <select id="node-config-input-logLevel" style="width: 150px;">
+      <option value="trace">Trace</option>
+      <option value="debug">Debug</option>
+      <option value="info">Info</option>
+      <option value="warning">Warning</option>
+      <option value="error">Error</option>
+    </select>
   </div>
 
   <!-- <div class="form-row">
@@ -65,12 +75,89 @@
       port: { value: '' },
       path: { value: '' },
       tunnelIdHeaderName: { value: '' },
+      logLevel: { value: 'info' },
     },
     label: function () {
       return this.name;
     },
     oneditprepare: function () {},
   });
+</script>
+
+<script type="text/html" data-help-name="wstunnel">
+  <p>Configuration node for WebSocket tunnel settings. This node defines the connection parameters and logging configuration for WebSocket tunnel servers.</p>
+
+  <h3>Configuration</h3>
+  <dl class="message-properties">
+    <dt>Name <span class="property-type">string</span></dt>
+    <dd>A descriptive name for this tunnel configuration. This is required and will be displayed in the node list.</dd>
+
+    <dt>Host <span class="property-type">string</span></dt>
+    <dd>The hostname or IP address where the WebSocket server will bind. Defaults to <code>localhost</code> if not specified.</dd>
+
+    <dt>Port <span class="property-type">number</span></dt>
+    <dd>The port number on which the WebSocket server will listen for connections. Defaults to <code>443</code> if not specified.</dd>
+
+    <dt>Path <span class="property-type">string</span></dt>
+    <dd>Optional path component for the WebSocket server URL. Can be left empty for root path connections.</dd>
+
+    <dt>Tunnel ID Header <span class="property-type">string</span></dt>
+    <dd>Name of the HTTP custom header used to identify tunnel connections. Defaults to <code>x-tunnel-id</code> if not specified.</dd>
+
+    <dt>Log Level <span class="property-type">string</span></dt>
+    <dd>
+      Sets the verbosity level for logging output. Available options:
+      <ul>
+        <li><strong>trace</strong> - Most verbose, includes all debug information</li>
+        <li><strong>debug</strong> - Debug information for troubleshooting</li>
+        <li><strong>info</strong> - General informational messages (default)</li>
+        <li><strong>warning</strong> - Warning messages only</li>
+        <li><strong>error</strong> - Error messages only</li>
+      </ul>
+    </dd>
+  </dl>
+
+  <h3>Usage</h3>
+  <p>
+    This configuration node is used by <code>wstunnel server</code> nodes to define connection parameters. Create one configuration node for each unique set of
+    connection settings you need.
+  </p>
+
+  <h3>Connection URL</h3>
+  <p>The WebSocket server will be accessible at:</p>
+  <pre>ws://[host]:[port][/path]</pre>
+
+  <h3>Tunnel ID Header</h3>
+  <p>
+    The tunnel ID header is used to associate incoming HTTP requests with specific WebSocket connections. Clients should include this header in their requests
+    to identify which tunnel to use.
+  </p>
+
+  <h3>Log Level Impact</h3>
+  <p>The selected log level affects all logging output from the reverse-ws-tunnel library:</p>
+  <ul>
+    <li><strong>trace/debug</strong> - Useful for development and troubleshooting connection issues</li>
+    <li><strong>info</strong> - Recommended for production environments</li>
+    <li><strong>warning/error</strong> - Minimal logging for performance-critical environments</li>
+  </ul>
+
+  <h3>Example Configuration</h3>
+  <ul>
+    <li><strong>Name:</strong> "Production Tunnel"</li>
+    <li><strong>Host:</strong> "0.0.0.0" (to accept connections from any interface)</li>
+    <li><strong>Port:</strong> "8080"</li>
+    <li><strong>Path:</strong> "/api/tunnel"</li>
+    <li><strong>Header:</strong> "x-tunnel-id"</li>
+    <li><strong>Log Level:</strong> "info"</li>
+  </ul>
+
+  <h3>Notes</h3>
+  <ul>
+    <li>Each configuration can be shared by multiple <code>wstunnel server</code> nodes</li>
+    <li>Changing the port or host requires redeploying affected server nodes</li>
+    <li>Log level changes are applied when server nodes are deployed or restarted</li>
+    <li>Ensure the specified port is available and not blocked by firewall rules</li>
+  </ul>
 </script>
 
 <script type="text/x-red" data-template-name="wstunnel client">
@@ -146,80 +233,61 @@
 
 <script type="text/x-red" data-template-name="wstunnel server">
   <div class="form-row">
-    <label for="node-input-wstunnnel"><i class="fa fa-gears"></i> Cofigure Tunnel Websocket server</label>
+    <label for="node-input-wstunnel"><i class="fa fa-gears"></i> Cofigure Tunnel Websocket server</label>
     <input type="text" id="node-input-wstunnel">
   </div>
 </script>
 
-<script type="text/x-red" data-help-name="wstunnel server">
+<script type="text/html" data-help-name="wstunnel server">
+  <p>This node starts a WebSocket server for tunneling HTTP traffic over WebSocket connections.</p>
+
+  <h3>Configuration</h3>
+  <dl class="message-properties">
+    <dt>wstunnel <span class="property-type">config</span></dt>
+    <dd>
+      Select a <code>wstunnel</code> configuration node that provides server options such as <code>host</code>, <code>port</code>, <code>path</code>,
+      <code>tunnel ID header name</code>, and <code>log level</code>.
+    </dd>
+  </dl>
+
+  <h3>Details</h3>
+  <p>When deployed, the node starts a WebSocket server using the port and options defined in the selected <code>wstunnel</code> config node.</p>
   <p>
-    This node is used to configure and manage a WebSocket server tunnel. It allows the establishment
-    of WebSocket-based communication between a server and a client. You can define the source and destination
-    addresses and ports to tunnel the traffic through WebSocket connections.
+    The node updates its status to indicate when it is listening and displays the number of connected clients. Connections are automatically closed if the node
+    is redeployed or the port is changed.
+  </p>
+  <p>The server listens for WebSocket connections and uses the configured tunnel ID header to associate incoming connections.</p>
+  <p>
+    The log level configured in the <code>wstunnel</code> config node is applied when the server starts, controlling the verbosity of logging output from the
+    tunnel library.
   </p>
 
-  <h3>Parameters</h3>
-  <table class="node-help">
-    <tr>
-      <td><strong>Name</strong></td>
-      <td>A unique name for the tunnel configuration. This will help you identify the tunnel in Node-RED.</td>
-    </tr>
-    <tr>
-      <td><strong>Host</strong></td>
-      <td>The host address to which the WebSocket server should connect. This is typically the address of your server hosting the WebSocket server.</td>
-    </tr>
-    <tr>
-      <td><strong>Port</strong></td>
-      <td>The port on which the WebSocket server will listen. This is the port used to accept WebSocket connections from clients.</td>
-    </tr>
-    <tr>
-      <td><strong>Source Address</strong></td>
-      <td>The source address (IP or hostname) for the WebSocket connection. This is typically set to the address of the service initiating the WebSocket connection.</td>
-    </tr>
-    <tr>
-      <td><strong>Source Port</strong></td>
-      <td>The source port that the WebSocket server will use. This is required to define the source of the communication.</td>
-    </tr>
-    <tr>
-      <td><strong>Destination Address</strong></td>
-      <td>The destination address where the WebSocket connection should forward the tunneled HTTP traffic. This is usually set to the IP or hostname of the remote service.</td>
-    </tr>
-    <tr>
-      <td><strong>Destination Port</strong></td>
-      <td>The destination port where the tunneled HTTP traffic will be sent. This corresponds to the port of the destination service.</td>
-    </tr>
-    <tr>
-      <td><strong>Timeout</strong></td>
-      <td>Timeout in milliseconds for the WebSocket connection. If the WebSocket connection does not establish within this time, the connection attempt will be aborted.</td>
-    </tr>
-  </table>
+  <h3>Runtime Behavior</h3>
+  <ul>
+    <li>Status will show <code>listening on port [port]</code> when active.</li>
+    <li>Each client connection updates the status with the current number of connected clients.</li>
+    <li>All client connections are properly closed when the node is stopped or removed.</li>
+  </ul>
 
-  <h3>Usage</h3>
-  <p>
-    After configuring the tunnel server, the node will act as the WebSocket server. It listens for incoming
-    WebSocket connection requests and forwards any received HTTP traffic to the specified destination address and port.
-  </p>
-
-  <h3>Example</h3>
-  <pre>
-    [
-      {
-        "id": "wstunnel-server-node",
-        "type": "wstunnel server",
-        "wstunnel": "wstunnel-config",
-        "name": "My WebSocket Tunnel Server",
-        "x": 300,
-        "y": 200,
-        "wires": []
-      }
-    ]
-  </pre>
+  <h3>Logging</h3>
+  <dl class="message-properties">
+    <dt>Listening</dt>
+    <dd>Logs when the WebSocket server is up and listening on the configured port.</dd>
+    <dt>Connection</dt>
+    <dd>Logs the client IP and port when a new WebSocket client connects.</dd>
+    <dt>Disconnection</dt>
+    <dd>Logs when a client disconnects and shows remaining connected clients.</dd>
+  </dl>
 
   <h3>Notes</h3>
   <ul>
-    <li>The server node requires a valid tunnel configuration to function. You can link a configuration node using the 'Configure Tunnel WebSocket server' field.</li>
-    <li>If the WebSocket server is not running, the node will attempt to reconnect based on the configured timeout.</li>
-    <li>Ensure the WebSocket server and client are compatible with the tunneling protocol.</li>
+    <li>
+      Ensure the <code>wstunnel</code> config node is correctly configured with a valid <strong>port</strong>, <strong>tunnel ID header</strong>, and
+      appropriate <strong>log level</strong>.
+    </li>
+    <li>Redeploying the flow will gracefully shut down existing WebSocket servers and restart them with updated configuration.</li>
+    <li>Log level changes require redeployment to take effect.</li>
+    <li>This node does not have input or output wires – it works autonomously based on its configuration.</li>
   </ul>
 </script>
 
