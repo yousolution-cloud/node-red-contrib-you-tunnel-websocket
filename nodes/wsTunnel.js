@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-const { startWebSocketServer } = require('reverse-ws-tunnel/server');
-const { setLogLevel } = require('reverse-ws-tunnel/utils');
+
+const { startWebSocketServer } = require('@remotelinker/reverse-ws-tunnel/server');
+const { setLogLevel } = require('@remotelinker/reverse-ws-tunnel/utils');
 
 const instances = {};
 
