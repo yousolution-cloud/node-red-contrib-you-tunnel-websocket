@@ -50,6 +50,8 @@ module.exports = function (RED) {
     node.status({ fill: 'red', shape: 'ring', text: 'disconnected' });
 
     const port = node.tunnelConfig.options.port;
+    const host = node.tunnelConfig.options.host ? '' : undefined;
+    const path = node.tunnelConfig.options.path ? '' : undefined;
     const tunnelIdHeaderName = node.tunnelConfig.options.tunnelIdHeaderName;
 
     instances[id] = instances[id] || { state: {} };
@@ -66,6 +68,8 @@ module.exports = function (RED) {
 
     instances[id].state = startWebSocketServer({
       port,
+      host,
+      path,
       tunnelIdHeaderName,
     });
 
