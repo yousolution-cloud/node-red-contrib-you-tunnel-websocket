@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-
-const { startWebSocketServer } = require('@remotelinker/reverse-ws-tunnel/server');
-const { setLogLevel } = require('@remotelinker/reverse-ws-tunnel/utils');
+const { startWebSocketServer, stopWebSocketServer } = require('@remotelinker/reverse-ws-tunnel/server');
+const { logger, setLogContext, setLogLevel } = require('@remotelinker/reverse-ws-tunnel/utils');
 
 const instances = {};
 
@@ -45,66 +44,63 @@ module.exports = function (RED) {
 
     // Set the log level dynamically based on configuration
     const logLevel = node.tunnelConfig.options.logLevel || 'info';
+    setLogContext('TunnelNode-' + node.tunnelConfig.options.name);
     setLogLevel(logLevel);
 
     node.status({ fill: 'red', shape: 'ring', text: 'disconnected' });
-
     const port = node.tunnelConfig.options.port;
     const host = node.tunnelConfig.options.host ? '' : undefined;
     const path = node.tunnelConfig.options.path ? '' : undefined;
     const tunnelIdHeaderName = node.tunnelConfig.options.tunnelIdHeaderName;
-
-    instances[id] = instances[id] || { state: {} };
-
-    if (instances[id].state[port]) {
-      console.warn(`Server already running on port ${port} for node ${id}. Skipping creation.`);
-      node.status({
-        fill: 'green',
-        shape: 'dot',
-        text: `listening on port ${port}`,
+    instances[id] = instances[id] || {};
+    // Cleanup any existing server on this port before starting
+    // This handles cases where previous deployment didn't cleanup properly
+    stopWebSocketServer(port)
+      .then(() => {
+        logger.info(`Cleaned up any existing server on port ${port} before starting`);
+        return startWebSocketServer({
+          port,
+          host,
+          path,
+          tunnelIdHeaderName,
+        });
+      })
+      .then((state) => {
+        instances[id].state = state;
+        logger.info(`Started WebSocketServer for node ${id} on port ${port}`);
+        if (instances[id].state[port].webSocketServer) {
+          onListening();
+        }
+      })
+      .catch((err) => {
+        logger.error(`Error starting WebSocketServer on port ${port}:`, err);
+        node.status({
+          fill: 'red',
+          shape: 'dot',
+          text: `error: ${err.message}`,
+        });
       });
-      return;
-    }
-
-    instances[id].state = startWebSocketServer({
-      port,
-      host,
-      path,
-      tunnelIdHeaderName,
-    });
-
-    console.log(`Started WebSocketServer for node ${id} on port ${port}`);
-
-    if (instances[id].state[port].webSocketServer) {
-      onListening();
-    }
-
     function onListening() {
       const server = instances[id].state[port].webSocketServer;
-
       server.on('listening', () => {
-        console.log('Listening ' + id);
+        logger.info('Listening ' + id);
         node.status({
           fill: 'green',
           shape: 'dot',
           text: `listening on port ${port}`,
         });
       });
-
       server.on('connection', (ws) => {
         const clientAddress = ws._socket.remoteAddress;
         const clientPort = ws._socket.remotePort;
         const totalClients = server.clients.size;
-
         node.status({
           fill: 'green',
           shape: 'dot',
           text: `clients ${totalClients}`,
         });
-
-        console.log(`WebSocket connection from ${clientAddress}:${clientPort}`);
-        console.log(`Total connected clients: ${totalClients}`);
-
+        logger.info(`WebSocket connection from ${clientAddress}:${clientPort}`);
+        logger.info(`Total connected clients: ${totalClients}`);
         ws.on('close', () => {
           const remainingClients = server.clients.size;
           node.status({
@@ -112,45 +108,31 @@ module.exports = function (RED) {
             shape: 'dot',
             text: `clients ${remainingClients}`,
           });
-          console.log(`Client disconnected: ${clientAddress}:${clientPort}`);
-          console.log(`Remaining clients: ${remainingClients}`);
+          logger.info(`Client disconnected: ${clientAddress}:${clientPort}`);
+          logger.info(`Remaining clients: ${remainingClients}`);
         });
       });
     }
-
     this.on('close', function (removed, done) {
+      logger.info(`[DEBUG] Close called for node ${id}, removed=${removed}`);
+
       if (instances[id] && instances[id].state && instances[id].state[port]) {
-        const server = instances[id].state[port].webSocketServer;
-        if (server) {
-          try {
-            for (const client of server.clients) {
-              try {
-                client.removeAllListeners();
-                client.close();
-              } catch (clientErr) {
-                console.error(`Error terminating client on port ${port}:`, clientErr);
-              }
-            }
-
-            server.close(() => {
-              console.log(`Closed WebSocketServer on port ${port} during node shutdown`);
-            });
-          } catch (err) {
-            console.error(`Error closing WebSocketServer on port ${port}:`, err);
-          }
-        }
-
-        delete instances[id].state[port];
-
-        // Se non ci sono più porte attive per questo nodo, cancella del tutto
-        if (Object.keys(instances[id].state).length === 0) {
-          delete instances[id];
-        }
+        stopWebSocketServer(port)
+          .then(() => {
+            logger.info(`Cleaned up WebSocketServer on port ${port} for node ${id}`);
+            delete instances[id];
+            done();
+          })
+          .catch((err) => {
+            console.error(`Error stopping server on port ${port}:`, err);
+            delete instances[id];
+            done();
+          });
+      } else {
+        logger.info(`No server state found for node ${id} on port ${port}`);
+        done();
       }
-
-      done();
     });
   }
-
   RED.nodes.registerType('wstunnel server', WSTunnelServer);
 };
